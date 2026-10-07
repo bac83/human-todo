@@ -1,0 +1,27 @@
+{
+  "name": "human-todo",
+  "version": "0.1.0",
+  "description": "Sidebar of the action items Claude hands to you in this session: upcoming, current, done. Resolve them in place and Claude is told.",
+  "author": {
+    "name": "Bastian Lahr",
+    "url": "https://github.com/bac83"
+  },
+  "homepage": "https://github.com/bac83/human-todo",
+  "repository": "https://github.com/bac83/human-todo",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "shortcut": {
+      "type": "string",
+      "title": "Sidebar shortcut",
+      "description": "Chord that toggles the sidebar; written to ~/.claude/keybindings.json on load. Same on Windows and macOS.",
+      "default": "ctrl+x t"
+    },
+    "wakeClaude": {
+      "type": "boolean",
+      "title": "Wake Claude on resolve",
+      "description": "When on, resolving a todo starts a turn so Claude reacts right away. Off: Claude reads it with its next request.",
+      "default": true
+    }
+  }
+}
