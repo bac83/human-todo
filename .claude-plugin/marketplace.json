@@ -1,0 +1,14 @@
+{
+  "name": "human-todo",
+  "description": "human-todo: a Claude Code sidebar of the action items Claude hands to you.",
+  "owner": {
+    "name": "Bastian Lahr",
+    "url": "https://github.com/bac83"
+  },
+  "plugins": [
+    {
+      "name": "human-todo",
+      "source": "./"
+    }
+  ]
+}

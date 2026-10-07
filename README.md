@@ -26,21 +26,17 @@ Claude adds them; you tick them off; Claude is told.
 
 ## Install
 
-Requires a Claude Code build with function-hook mods (2.1.289 or newer).
+Requires a Claude Code build with function-hook mods (2.1.289 or newer). At the prompt of a
+terminal session, type:
 
-```sh
-git clone https://github.com/bac83/human-todo.git
-claude --plugin-dir ./human-todo
+```
+/plugin install human-todo --marketplace bac83/human-todo
 ```
 
-To load it in every session without the flag, add the folder to `CLAUDE_CODE_PLUGIN_DIRS`
-in the `env` block of `~/.claude/settings.json`:
+Answer `y` to add the marketplace, then pick a scope (user = every session) and set the
+options. The sidebar is active right away, no restart.
 
-```json
-{ "env": { "CLAUDE_CODE_PLUGIN_DIRS": "/absolute/path/to/human-todo" } }
-```
-
-(Windows: `C:\\path\\to\\human-todo`; several folders are separated with `;` on Windows, `:` on macOS/Linux.)
+Update later with `claude plugin update human-todo@human-todo`, then `/reload-plugins`.
 
 ## Settings (`/config`)
 
@@ -67,6 +63,24 @@ built-in action `app:toggleDiffPreSession` (no default key). On load the mod add
 Todos live for the session (they survive a mod reload, not a restart).
 
 ## Develop
+
+Run it from a clone instead of the installed copy:
+
+```sh
+git clone https://github.com/bac83/human-todo.git
+claude --plugin-dir ./human-todo
+```
+
+To load the clone in every session without the flag, add the folder to `CLAUDE_CODE_PLUGIN_DIRS`
+in the `env` block of `~/.claude/settings.json`:
+
+```json
+{ "env": { "CLAUDE_CODE_PLUGIN_DIRS": "/absolute/path/to/human-todo" } }
+```
+
+(Windows: `C:\\path\\to\\human-todo`; several folders are separated with `;` on Windows, `:` on macOS/Linux.)
+
+Checks:
 
 ```sh
 claude plugin validate .
