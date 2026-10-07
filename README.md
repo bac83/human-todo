@@ -65,14 +65,30 @@ Todos live for the session (they survive a mod reload, not a restart).
 
 ## Data & privacy
 
-human-todo makes no network requests and sends nothing off your machine.
+human-todo makes no network requests of its own. It reads only its own session state and
+`keybindings.json`. What it does beyond drawing the sidebar:
 
-- Todos live in the session's own state and are gone when the session ends.
-- The one file it writes is `~/.claude/keybindings.json`, for the shortcut (see
-  [About the shortcut](#about-the-shortcut)). It remembers which chord it added in the plugin's
-  local store, so it can take that binding out again.
-- When you resolve a todo, a short note about it goes into your own conversation with Claude
-  (as a new turn when `wakeClaude` is on).
+- **Todos** live in the session's state and are gone when the session ends.
+- **Notes to Claude.** When you resolve or reopen a todo, the mod adds one line to your
+  conversation with Claude, which reaches Claude like any message you send. With `wakeClaude` on,
+  the line is submitted as a prompt that starts a turn; off, or when that prompt is refused, it is
+  appended for Claude's next request. The line holds only the todo's id and title:
+
+  ```
+  <human-todo>The user marked their todo t3 "Run gcloud auth login" as done. Continue any work that was waiting on it.</human-todo>
+  <human-todo>The user reopened their todo t3 "Run gcloud auth login"; it is current again.</human-todo>
+  ```
+
+  Nothing else goes into these prompts: no other conversation text, file contents or settings.
+- **One settings file.** To bind the shortcut, the mod edits Claude Code's keybindings file,
+  `~/.claude/keybindings.json` (or `keybindings.json` in `$CLAUDE_CONFIG_DIR`). It adds or removes
+  only its own binding and keeps everything else in the file (see
+  [About the shortcut](#about-the-shortcut)). It remembers the chord it added in the plugin's local
+  store, so it can take that binding out again. It writes no other file.
+- **Its own tools and command.** The three tools above are the mod's own: it registers them at
+  session start and answers them itself. `/human-todo` is its own command, which it answers itself
+  (toggle the sidebar, or add a todo). It hooks no other tool or command, takes no permission
+  decision and changes no other setting.
 
 ## Uninstall
 
