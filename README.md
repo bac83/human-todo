@@ -42,7 +42,7 @@ Update later with `claude plugin update human-todo@human-todo`, then `/reload-pl
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `shortcut` | `ctrl+x t` | Chord that toggles the sidebar. Empty = no shortcut. |
+| `shortcut` | `ctrl+x t` | Chord that toggles the sidebar. Empty = no shortcut, and the binding the mod added is removed. |
 | `wakeClaude` | `true` | On: resolving a todo starts a turn so Claude reacts at once (each toggle is a turn). Off: Claude reads it with its next request. |
 
 ### About the shortcut
@@ -51,6 +51,7 @@ Claude Code has no keybinding actions of a plugin's own, so the sidebar's toggle
 built-in action `app:toggleDiffPreSession` (no default key). On load the mod adds
 `"ctrl+x t": "app:toggleDiffPreSession"` to the `Global` context of `~/.claude/keybindings.json`
 (or `$CLAUDE_CONFIG_DIR/keybindings.json`). A binding you made for that action yourself is kept.
+Setting `shortcut` to empty takes the mod's own binding back out.
 
 ## Tools Claude gets
 
@@ -61,6 +62,16 @@ built-in action `app:toggleDiffPreSession` (no default key). On load the mod add
 | `mcp__human-todo__list_todos` | List this session's todos. |
 
 Todos live for the session (they survive a mod reload, not a restart).
+
+## Uninstall
+
+1. In `/config`, set the human-todo `shortcut` to empty. The mod removes the binding it added to
+   `keybindings.json`; a binding you made yourself stays.
+2. `/plugin uninstall human-todo@human-todo`
+
+Uninstalled first? Delete `"ctrl+x t": "app:toggleDiffPreSession"` from the `Global` block of
+`~/.claude/keybindings.json` by hand. Left in place, the chord opens Claude Code's built-in diff
+preview instead.
 
 ## Develop
 

@@ -1,3 +1,4 @@
+import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
 const PANE = {
@@ -228,4 +229,61 @@ test('a pane placed later is seen by the chord: it collapses instead of reopenin
   await pane.press({ key: 'collapse' })
   expect(closes).toEqual(['human-todo'])
   await pane.unmount()
+})
+
+const KEYBINDINGS = '/cfg/keybindings.json'
+
+/**
+ * A session starting over a config folder of one keybindings.json and the mod's
+ * store, answered beneath the mod. Answers the file as it stands afterwards.
+ */
+function fakeConfig(on: On, file: object, store: Record<string, unknown>) {
+  const files: Record<string, string> = { [KEYBINDINGS]: JSON.stringify(file) }
+  on('env.get', ($, e) => ({ value: e.name === 'CLAUDE_CONFIG_DIR' ? '/cfg' : undefined }))
+  on('fs.exists', ($, e) => ({ value: e.path in files }))
+  on('fs.read', ($, e) => ({ value: files[e.path] ?? '' }))
+  on('fs.write', ($, e) => {
+    files[e.path] = e.text
+    return { value: undefined }
+  })
+  on('store.get', ($, e) => ({ value: store[e.key] }))
+  on('store.set', ($, e) => {
+    store[e.key] = e.value
+    return { value: undefined }
+  })
+  on('store.delete', ($, e) => {
+    delete store[e.key]
+    return { value: undefined }
+  })
+  on('ui.log', () => ({ value: undefined }))
+  on('tool.register', ($, e) => ({ value: { tool: `mcp__human-todo__${e.name}` } }))
+  on('command.register', ($, e) => ({ value: { command: e.name } }))
+  on('ui.panes', () => ({ value: [] }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  return () => JSON.parse(files[KEYBINDINGS] ?? '{}')
+}
+
+test('an empty shortcut removes the binding the mod installed', { options: { shortcut: '' } }, async ($, on) => {
+  const store: Record<string, unknown> = { installedChord: 'ctrl+x t' }
+  const keybindings = fakeConfig(
+    on,
+    { bindings: [{ context: 'Global', bindings: { 'ctrl+x t': 'app:toggleDiffPreSession', 'ctrl+k': 'chat:stash' } }] },
+    store,
+  )
+  await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+
+  expect(keybindings().bindings[0].bindings).toEqual({ 'ctrl+k': 'chat:stash' })
+  expect(store.installedChord).toBeUndefined()
+})
+
+test('an empty shortcut keeps a binding the person made themselves', { options: { shortcut: '' } }, async ($, on) => {
+  const store: Record<string, unknown> = {}
+  const keybindings = fakeConfig(
+    on,
+    { bindings: [{ context: 'Global', bindings: { 'ctrl+y': 'app:toggleDiffPreSession' } }] },
+    store,
+  )
+  await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+
+  expect(keybindings().bindings[0].bindings).toEqual({ 'ctrl+y': 'app:toggleDiffPreSession' })
 })

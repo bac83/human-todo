@@ -476,8 +476,9 @@ type Keybindings = { bindings?: { context: string; bindings: Record<string, stri
 
 /**
  * Binds `chord` to the borrowed action in ~/.claude/keybindings.json (Global
- * context), keeping any binding the person made for it themselves. Answers the
- * chord in force, or undefined when there is none.
+ * context), keeping any binding the person made for it themselves. An empty
+ * `chord` takes out the binding the mod installed. Answers the chord in force,
+ * or undefined when there is none.
  */
 async function ensureShortcut($: $, chord: string): Promise<string | undefined> {
   const home = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? (await homeClaudeDir($))
@@ -500,7 +501,14 @@ async function ensureShortcut($: $, chord: string): Promise<string | undefined> 
     .find(([, action]) => action === ACTION)?.[0]
 
   if (bound !== undefined && (bound === chord || bound !== installed)) return bound
-  if (chord === '') return undefined
+  if (chord === '') {
+    if (bound === undefined) return undefined
+    for (const block of blocks) delete block.bindings[bound]
+    await writeKeybindings($, path, file, blocks)
+    await $.store.delete('installedChord')
+    $.ui.log(`${PLUGIN}: removed ${bound} (in ${path})`)
+    return undefined
+  }
 
   let global = blocks.find(block => block.context === 'Global')
   if (global === undefined) {
@@ -517,6 +525,13 @@ async function ensureShortcut($: $, chord: string): Promise<string | undefined> 
   }
   global.bindings[chord] = ACTION
 
+  await writeKeybindings($, path, file, blocks)
+  await $.store.set('installedChord', chord)
+  $.ui.log(`${PLUGIN}: bound ${chord} to toggle the sidebar (in ${path})`)
+  return chord
+}
+
+async function writeKeybindings($: $, path: string, file: Keybindings, blocks: NonNullable<Keybindings['bindings']>) {
   const next = {
     $schema: 'https://www.schemastore.org/claude-code-keybindings.json',
     $docs: 'https://code.claude.com/docs/en/keybindings',
@@ -524,9 +539,6 @@ async function ensureShortcut($: $, chord: string): Promise<string | undefined> 
     bindings: blocks,
   }
   await $.fs.write(path, JSON.stringify(next, null, 2) + '\n')
-  await $.store.set('installedChord', chord)
-  $.ui.log(`${PLUGIN}: bound ${chord} to toggle the sidebar (in ${path})`)
-  return chord
 }
 
 async function homeClaudeDir($: $): Promise<string | undefined> {
