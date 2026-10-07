@@ -63,6 +63,17 @@ Setting `shortcut` to empty takes the mod's own binding back out.
 
 Todos live for the session (they survive a mod reload, not a restart).
 
+## Data & privacy
+
+human-todo makes no network requests and sends nothing off your machine.
+
+- Todos live in the session's own state and are gone when the session ends.
+- The one file it writes is `~/.claude/keybindings.json`, for the shortcut (see
+  [About the shortcut](#about-the-shortcut)). It remembers which chord it added in the plugin's
+  local store, so it can take that binding out again.
+- When you resolve a todo, a short note about it goes into your own conversation with Claude
+  (as a new turn when `wakeClaude` is on).
+
 ## Uninstall
 
 1. In `/config`, set the human-todo `shortcut` to empty. The mod removes the binding it added to
