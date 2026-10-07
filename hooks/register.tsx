@@ -34,8 +34,6 @@ const SECTIONS: { status: TodoStatus; label: string; color: string; hotkey: stri
 
 const PRIORITY_RANK: Record<TodoPriority, number> = { high: 0, normal: 1, low: 2 }
 
-type $ = EngineInterface
-
 export const register: Register = (on, options) => {
   const chord = String(options.shortcut ?? 'ctrl+x t').trim()
   const wakeClaude = options.wakeClaude !== false
@@ -340,7 +338,7 @@ export const register: Register = (on, options) => {
   })
 }
 
-async function openPane($: $, focus = false) {
+async function openPane($: EngineInterface, focus = false) {
   const opened = await $.ui.open({
     id: PANE,
     title: TITLE,
@@ -355,14 +353,14 @@ async function openPane($: $, focus = false) {
  * on a narrow terminal waits undrawn, and is placed later when it widens).
  * Unreadable, the isOpen atom stands in.
  */
-async function paneState($: $): Promise<{ isUp: boolean; isFocused: boolean }> {
+async function paneState($: EngineInterface): Promise<{ isUp: boolean; isFocused: boolean }> {
   const panes = await $.ui.panes().catch(() => undefined)
   if (panes === undefined) return { isUp: await read($, isOpen), isFocused: true }
   const pane = panes.find(other => other.id === PANE && other.isPlaced)
   return { isUp: pane !== undefined, isFocused: pane?.isFocused ?? false }
 }
 
-async function toggleSidebar($: $) {
+async function toggleSidebar($: EngineInterface) {
   const pane = await paneState($)
   if (pane.isUp && pane.isFocused) {
     try {
@@ -383,7 +381,7 @@ async function toggleSidebar($: $) {
 }
 
 /** Moves the pane's focus ring onto `key`, else `fallback`; nothing while the pane lacks the keys. */
-async function moveRing($: $, key: string, fallback?: string) {
+async function moveRing($: EngineInterface, key: string, fallback?: string) {
   const moved = await $.ui.focus({ requestId: PANE, key }).catch((error: unknown) => ({ deny: String(error) }))
   if (!('deny' in moved) || moved.deny === undefined) {
     ring = key
@@ -392,7 +390,7 @@ async function moveRing($: $, key: string, fallback?: string) {
   if (fallback !== undefined && fallback !== key) await moveRing($, fallback)
 }
 
-async function tellClaude($: $, text: string, wakeClaude: boolean) {
+async function tellClaude($: EngineInterface, text: string, wakeClaude: boolean) {
   const note = `<human-todo>${text}</human-todo>`
   if (wakeClaude) {
     // A refused wake (a hook's drop, or a rejection) still tells Claude, with its next request.
@@ -405,16 +403,15 @@ async function tellClaude($: $, text: string, wakeClaude: boolean) {
   await appendNote($, note)
 }
 
-async function appendNote($: $, note: string) {
-  const appended = await $.session
-    .append({ message: { type: 'user', content: [{ type: 'text', text: note }] } })
-    .catch((error: unknown) => ({ deny: String(error) }))
+async function appendNote($: EngineInterface, note: string) {
+  const message = { type: 'user' as const, content: [{ type: 'text' as const, text: note }] }
+  const appended = await $.session.append({ message }).catch((error: unknown) => ({ deny: String(error) }))
   if ('deny' in appended && appended.deny !== undefined) {
     $.ui.toast(`human-todo: Claude was not told (${appended.deny}). Tell it yourself.`)
   }
 }
 
-async function setStatus($: $, id: string, status: TodoStatus, wakeClaude: boolean) {
+async function setStatus($: EngineInterface, id: string, status: TodoStatus, wakeClaude: boolean) {
   let changed: Todo | undefined
   await update($, todos, list =>
     list.map(todo => {
@@ -427,7 +424,7 @@ async function setStatus($: $, id: string, status: TodoStatus, wakeClaude: boole
   await tellClaude($, describeChange(changed), wakeClaude)
 }
 
-async function addTodo($: $, fields: Omit<Todo, 'id'>): Promise<Todo> {
+async function addTodo($: EngineInterface, fields: Omit<Todo, 'id'>): Promise<Todo> {
   let id = 0
   await update($, nextId, n => {
     id = n
@@ -480,7 +477,7 @@ type Keybindings = { bindings?: { context: string; bindings: Record<string, stri
  * `chord` takes out the binding the mod installed. Answers the chord in force,
  * or undefined when there is none.
  */
-async function ensureShortcut($: $, chord: string): Promise<string | undefined> {
+async function ensureShortcut($: EngineInterface, chord: string): Promise<string | undefined> {
   const home = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? (await homeClaudeDir($))
   if (home === undefined) return undefined
   const path = `${home.replace(/[\\/]+$/, '')}/keybindings.json`
@@ -531,7 +528,7 @@ async function ensureShortcut($: $, chord: string): Promise<string | undefined> 
   return chord
 }
 
-async function writeKeybindings($: $, path: string, file: Keybindings, blocks: NonNullable<Keybindings['bindings']>) {
+async function writeKeybindings($: EngineInterface, path: string, file: Keybindings, blocks: NonNullable<Keybindings['bindings']>) {
   const next = {
     $schema: 'https://www.schemastore.org/claude-code-keybindings.json',
     $docs: 'https://code.claude.com/docs/en/keybindings',
@@ -541,7 +538,7 @@ async function writeKeybindings($: $, path: string, file: Keybindings, blocks: N
   await $.fs.write(path, JSON.stringify(next, null, 2) + '\n')
 }
 
-async function homeClaudeDir($: $): Promise<string | undefined> {
+async function homeClaudeDir($: EngineInterface): Promise<string | undefined> {
   const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
   return home === undefined ? undefined : `${home}/.claude`
 }
