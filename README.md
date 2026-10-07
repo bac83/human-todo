@@ -4,22 +4,7 @@ A Claude Code mod that keeps a sidebar of the things **you** have to do during a
 the login only you can run, the design only you can approve, the device only you can test on.
 Claude adds them; you tick them off; Claude is told.
 
-```
-╭ Human todo ─────────────────────────────╮
-│ 2 waiting on you                      ▸ │
-│                                         │
-│ ▾ Current (1)                           │
-│ ○ ! Run gcloud auth login               │
-│     gcloud auth login --update-adc      │
-│                                         │
-│ ▾ Upcoming (1)                          │
-│ ○ Approve the onboarding design         │
-│                                         │
-│ ▸ Done (3)                              │
-│                                         │
-│ ctrl+x t toggles · 1-9 ○/✓ · c/u/d fold │
-╰─────────────────────────────────────────╯
-```
+![human-todo sidebar next to a Claude Code session: six todos waiting on the user, grouped into Current and Upcoming](docs/screenshot.png)
 
 ## Features
 
