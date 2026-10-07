@@ -480,12 +480,14 @@ type Keybindings = { bindings?: { context: string; bindings: Record<string, stri
 async function ensureShortcut($: EngineInterface, chord: string): Promise<string | undefined> {
   const home = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? (await homeClaudeDir($))
   if (home === undefined) return undefined
-  const path = `${home.replace(/[\\/]+$/, '')}/keybindings.json`
+  // The file name stays literal in each $.fs call, so the directory can read which file it is.
+  const dir = home.replace(/[\\/]+$/, '')
+  const path = `${dir}/keybindings.json`
 
   let file: Keybindings = {}
-  if (await $.fs.exists(path)) {
+  if (await $.fs.exists(`${dir}/keybindings.json`)) {
     try {
-      file = JSON.parse(await $.fs.read(path)) as Keybindings
+      file = JSON.parse(await $.fs.read(`${dir}/keybindings.json`)) as Keybindings
     } catch {
       $.ui.log(`${PLUGIN}: ${path} is not valid JSON; shortcut not installed, use /human-todo`)
       return undefined
@@ -501,7 +503,7 @@ async function ensureShortcut($: EngineInterface, chord: string): Promise<string
   if (chord === '') {
     if (bound === undefined) return undefined
     for (const block of blocks) delete block.bindings[bound]
-    await writeKeybindings($, path, file, blocks)
+    await writeKeybindings($, dir, file, blocks)
     await $.store.delete('installedChord')
     $.ui.log(`${PLUGIN}: removed ${bound} (in ${path})`)
     return undefined
@@ -522,20 +524,20 @@ async function ensureShortcut($: EngineInterface, chord: string): Promise<string
   }
   global.bindings[chord] = ACTION
 
-  await writeKeybindings($, path, file, blocks)
+  await writeKeybindings($, dir, file, blocks)
   await $.store.set('installedChord', chord)
   $.ui.log(`${PLUGIN}: bound ${chord} to toggle the sidebar (in ${path})`)
   return chord
 }
 
-async function writeKeybindings($: EngineInterface, path: string, file: Keybindings, blocks: NonNullable<Keybindings['bindings']>) {
+async function writeKeybindings($: EngineInterface, dir: string, file: Keybindings, blocks: NonNullable<Keybindings['bindings']>) {
   const next = {
     $schema: 'https://www.schemastore.org/claude-code-keybindings.json',
     $docs: 'https://code.claude.com/docs/en/keybindings',
     ...file,
     bindings: blocks,
   }
-  await $.fs.write(path, JSON.stringify(next, null, 2) + '\n')
+  await $.fs.write(`${dir}/keybindings.json`, JSON.stringify(next, null, 2) + '\n')
 }
 
 async function homeClaudeDir($: EngineInterface): Promise<string | undefined> {
