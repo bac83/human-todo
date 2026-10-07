@@ -63,6 +63,20 @@ Setting `shortcut` to empty takes the mod's own binding back out.
 
 Todos live for the session (they survive a mod reload, not a restart).
 
+## What the mod hooks
+
+Every hook is in `hooks/register.tsx`.
+
+| Event | Scope | What the hook does |
+| --- | --- | --- |
+| `session.start` | the session | Registers the three tools and `/human-todo`, binds the shortcut, then lets the session start unchanged. |
+| `command.run` | `/human-todo` only | Answers the mod's own command: toggles the sidebar, or with `add <text>` adds a todo. No other command reaches it. |
+| `tool.call` | its three tools only | Answers `add_todo`, `update_todo` and `list_todos`, the mod's own tools. No other tool call reaches it. |
+| `ui.close` | every pane | Notes when its own sidebar closed and whether you closed it; every close is passed on unchanged. |
+| `ui.focus` | its own sidebar | Remembers which row has the focus ring; the focus change is passed on unchanged. |
+| `ui.render` | `AbovePrompt` | Draws the one-line band above the prompt while the sidebar is collapsed; otherwise leaves the band to Claude Code. |
+| `ui.render` | its own sidebar pane | Draws the sidebar. |
+
 ## Data & privacy
 
 human-todo makes no network requests of its own. It reads only its own session state and

@@ -1,7 +1,7 @@
 {
   "name": "human-todo",
   "displayName": "Human Todo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Sidebar of the action items Claude hands to you in this session: upcoming, current, done. Resolve them in place and Claude is told.",
   "author": {
     "name": "Bastian Lahr",
