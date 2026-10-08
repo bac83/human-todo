@@ -1,5 +1,5 @@
 import type { On } from 'claude-code'
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 const PANE = {
   plugin: 'human-todo',
@@ -28,16 +28,21 @@ const BAND = {
   },
 } as const
 
+const RESOLVED =
+  '<human-todo>The user marked their todo t1 "Run gcloud auth login" as done. Continue any work that was waiting on it.</human-todo>'
+
+/** The texts of the notes the mod appended for Claude to read. */
+function notes(session: ReturnType<typeof mock.session>): string[] {
+  return session
+    .appended()
+    .flatMap(row => row.message.content.flatMap(block => (block.type === 'text' && typeof block.text === 'string' ? [block.text] : [])))
+}
+
 test('Claude adds todos, the person resolves one, Claude is told', async ($, on) => {
   // A narrow terminal: the pane waits unplaced, so the collapsed band draws.
   on('ui.open', () => ({ value: { isPlaced: false, reason: 'narrow' } }))
-  // The kit has no stand-in for session.append, so the note Claude reads
-  // surfaces here as the fallback toast, which carries the refusal.
-  const toasts: string[] = []
-  on('ui.toast', ($, e) => {
-    toasts.push(e.text)
-    return { value: undefined }
-  })
+  // No prompt.submit beneath: the wake fails and the note is appended for the next request.
+  const session = mock.session(on)
 
   const added = await $.tool.call({
     tool: 'mcp__human-todo__add_todo',
@@ -63,7 +68,7 @@ test('Claude adds todos, the person resolves one, Claude is told', async ($, on)
   await pane.press({ key: 'toggle-t1' })
   expect((await pane.find({ key: 'section-current' }))?.props.label).toBe('▾ Current (0)')
   expect((await pane.find({ key: 'section-done' }))?.props.label).toBe('▸ Done (1)')
-  expect(toasts.join(' ')).toContain('Claude was not told')
+  expect(notes(session)).toEqual([RESOLVED])
 
   await pane.press({ key: 'section-done' })
   expect(await pane.find({ key: 'toggle-t1' })).toBeDefined()
@@ -170,6 +175,19 @@ test('resolving a todo wakes Claude with the note', async ($, on) => {
 test('a refused wake still tells Claude with the next request', async ($, on) => {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('prompt.submit', () => ({ drop: 'busy' }))
+  const session = mock.session(on)
+  await $.tool.call({ tool: 'mcp__human-todo__add_todo', title: 'Approve the design', status: 'current' })
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await pane.press({ key: 'toggle-t1' })
+  await pane.unmount()
+  expect(notes(session)).toEqual([
+    '<human-todo>The user marked their todo t1 "Approve the design" as done. Continue any work that was waiting on it.</human-todo>',
+  ])
+})
+
+test('a refused note asks the person to tell Claude', { options: { wakeClaude: false } }, async ($, on) => {
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.append', () => ({ deny: 'read-only run' }))
   const toasts: string[] = []
   on('ui.toast', ($, e) => {
     toasts.push(e.text)
@@ -179,8 +197,7 @@ test('a refused wake still tells Claude with the next request', async ($, on) =>
   const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await pane.press({ key: 'toggle-t1' })
   await pane.unmount()
-  // The kit has no session.append: the fallback's refusal surfaces as its toast.
-  expect(toasts.join(' ')).toContain('Claude was not told')
+  expect(toasts.join(' ')).toContain('Claude was not told (read-only run)')
 })
 
 test('the chord focuses a pane Claude opened before it collapses it', async ($, on) => {
@@ -233,6 +250,9 @@ test('a pane placed later is seen by the chord: it collapses instead of reopenin
 
 const KEYBINDINGS = '/cfg/keybindings.json'
 
+/** The engine hands fs hooks a native absolute path: on Windows `/cfg/x` arrives as `C:\cfg\x`. */
+const posix = (path: string) => path.replace(/^[A-Za-z]:/, '').replace(/\\/g, '/')
+
 /**
  * A session starting over a config folder of one keybindings.json and the mod's
  * store, answered beneath the mod. Answers the file as it stands afterwards.
@@ -240,10 +260,10 @@ const KEYBINDINGS = '/cfg/keybindings.json'
 function fakeConfig(on: On, file: object, store: Record<string, unknown>) {
   const files: Record<string, string> = { [KEYBINDINGS]: JSON.stringify(file) }
   on('env.get', ($, e) => ({ value: e.name === 'CLAUDE_CONFIG_DIR' ? '/cfg' : undefined }))
-  on('fs.exists', ($, e) => ({ value: e.path in files }))
-  on('fs.read', ($, e) => ({ value: files[e.path] ?? '' }))
+  on('fs.exists', ($, e) => ({ value: posix(e.path) in files }))
+  on('fs.read', ($, e) => ({ value: files[posix(e.path)] ?? '' }))
   on('fs.write', ($, e) => {
-    files[e.path] = e.text
+    files[posix(e.path)] = e.text
     return { value: undefined }
   })
   on('store.get', ($, e) => ({ value: store[e.key] }))
