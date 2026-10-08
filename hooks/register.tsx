@@ -34,6 +34,24 @@ const SECTIONS: { status: TodoStatus; label: string; color: string; hotkey: stri
 
 const PRIORITY_RANK: Record<TodoPriority, number> = { high: 0, normal: 1, low: 2 }
 
+// The tools may reach the model deferred, their name alone, so the when and
+// how ride in the system prompt, where the model reads them every request.
+const GUIDE = {
+  id: 'human-todo:guide',
+  scope: 'session',
+  text: [
+    '# Human todo',
+    'The user keeps a todo sidebar of the actions only they can do: mcp__human-todo__add_todo, ' +
+      'update_todo, list_todos (load them with ToolSearch first if they are deferred).',
+    '- Put such actions on the list with add_todo, not only in your reply: an interactive login, ' +
+      'a decision or approval, a test on a device, a secret to supply, a page to review. ' +
+      'Also every task the user asks you to put on their list.',
+    '- One action per todo. A task of several steps is several add_todo calls, one per step: ' +
+      'the first "current", the rest "upcoming". Never a bullet list or numbered steps in title or detail.',
+    '- Move an upcoming todo to "current" once it can be done; mark one done with update_todo when you see it happen.',
+  ].join('\n'),
+} as const
+
 export const register: Register = (on, options) => {
   const chord = String(options.shortcut ?? 'ctrl+x t').trim()
   const wakeClaude = options.wakeClaude !== false
@@ -48,12 +66,16 @@ export const register: Register = (on, options) => {
         'It shows in their todo sidebar; you are told when they resolve it. ' +
         'Use status "current" for what they can do now, "upcoming" for future steps they cannot do yet ' +
         '(they cannot tick those off); move one to "current" with update_todo once it can be done. ' +
+        'One action per todo: several steps are several calls, never a list inside one todo. ' +
         'Do not use it for your own work.',
       inputSchema: {
         type: 'object',
         properties: {
           title: { type: 'string', description: 'Short imperative, e.g. "Run gcloud auth login"' },
-          detail: { type: 'string', description: 'Optional: exact command, link or context' },
+          detail: {
+            type: 'string',
+            description: 'Optional: exact command, link or context for this one step; not a list of steps',
+          },
           priority: { type: 'string', enum: ['high', 'normal', 'low'], default: 'normal' },
           status: { type: 'string', enum: ['current', 'upcoming'], default: 'upcoming' },
         },
@@ -94,6 +116,11 @@ export const register: Register = (on, options) => {
     await update($, isOpen, () => pane.isUp)
 
     return next(e)
+  })
+
+  on('prompt.compose', async ($, e, next) => {
+    const { sections } = await next(e)
+    return { sections: [...sections, GUIDE] }
   })
 
   on('command.run', { command: 'human-todo' }, async ($, e) => {

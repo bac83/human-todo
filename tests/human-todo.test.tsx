@@ -287,3 +287,20 @@ test('an empty shortcut keeps a binding the person made themselves', { options: 
 
   expect(keybindings().bindings[0].bindings).toEqual({ 'ctrl+y': 'app:toggleDiffPreSession' })
 })
+
+test('the system prompt tells Claude when to add todos and to split steps', async ($, on) => {
+  on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'You are Claude.', scope: 'shared' }] }))
+  const { sections } = await $.prompt.compose({
+    model: 'claude-opus-5-5',
+    promptModel: 'claude-opus-5-5',
+    surfaces: ['terminal'],
+    tools: [],
+    outputStyle: null,
+    traits: [],
+  })
+  const guide = sections.find(section => section.id === 'human-todo:guide')
+  expect(sections[0]?.id).toBe('intro')
+  expect(guide?.scope).toBe('session')
+  expect(guide?.text).toContain('mcp__human-todo__add_todo')
+  expect(guide?.text).toContain('One action per todo')
+})

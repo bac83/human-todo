@@ -72,6 +72,7 @@ Every hook is in `hooks/register.tsx`.
 | `session.start` | the session | Registers the three tools and `/human-todo`, binds the shortcut, then lets the session start unchanged. |
 | `command.run` | `/human-todo` only | Answers the mod's own command: toggles the sidebar, or with `add <text>` adds a todo. No other command reaches it. |
 | `tool.call` | its three tools only | Answers `add_todo`, `update_todo` and `list_todos`, the mod's own tools. No other tool call reaches it. |
+| `prompt.compose` | the system prompt | Appends one section, `human-todo:guide`, after everything else; every other section is passed on unchanged. |
 | `ui.close` | every pane | Notes when its own sidebar closed and whether you closed it; every close is passed on unchanged. |
 | `ui.focus` | its own sidebar | Remembers which row has the focus ring; the focus change is passed on unchanged. |
 | `ui.render` | `AbovePrompt` | Draws the one-line band above the prompt while the sidebar is collapsed; otherwise leaves the band to Claude Code. |
@@ -94,6 +95,10 @@ human-todo makes no network requests of its own. It reads only its own session s
   ```
 
   Nothing else goes into these prompts: no other conversation text, file contents or settings.
+- **A section of the system prompt.** Claude may see the three tools by name only, so the mod
+  appends a fixed section, `human-todo:guide`, to the system prompt: when to put an action on your
+  list, one action per todo (several steps as several todos), and when to move or close one. It is
+  the same text in every session and holds none of your data.
 - **One settings file.** To bind the shortcut, the mod edits Claude Code's keybindings file,
   `~/.claude/keybindings.json` (or `keybindings.json` in `$CLAUDE_CONFIG_DIR`). It adds or removes
   only its own binding and keeps everything else in the file (see
